@@ -23,7 +23,8 @@ import { dbObject } from './entity/dbObj';
     entities:[dbObject],
     autoLoadEntities: true,
     synchronize: true,
-  })
+  }),
+  TypeOrmModule.forFeature([dbObject])
 ],
   controllers: [AppController],
   providers: [AppService,
