@@ -5,6 +5,7 @@ import { AppService } from './app.service';
 import * as redisStore from 'cache-manager-redis-store';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { dbObject } from './entity/dbObj';
+import { ScheduleModule } from '@nestjs/schedule';
 
 
 @Module({
@@ -24,7 +25,8 @@ import { dbObject } from './entity/dbObj';
     autoLoadEntities: true,
     synchronize: true,
   }),
-  TypeOrmModule.forFeature([dbObject])
+  TypeOrmModule.forFeature([dbObject]),
+  ScheduleModule.forRoot()
 ],
   controllers: [AppController],
   providers: [AppService,

@@ -10,7 +10,7 @@ import { dbObject } from './entity/dbObj';
 export class AppService {
 
   constructor(@Inject(CACHE_MANAGER) private cacheManager: Cache,
-  @InjectRepository(dbObject) private objRepo: Repository<dbObject>){}
+    @InjectRepository(dbObject) private objRepo: Repository<dbObject>) { }
 
   async read(objKey: string): Promise<Object> {
     const value = await this.cacheManager.get(objKey);
@@ -22,22 +22,10 @@ export class AppService {
     else { throw new HttpException("Wrong key!", 400) };
   }
 
-  // async getAll():Promise <dbObject[]>{
-  //   return this.objRepo.find();
-  // }
-
-  // should be deleted from db when expired from redis !
   async create(obj: objCreateDto): Promise<Object> {
     const foundedKey = await this.cacheManager.get(obj.key);
     if (!foundedKey) {
-      const value = await this.cacheManager.set(obj.key, obj.value, { ttl: 300 });
-
-      //console.log("value", value); // OK
-
-      //for db
-      this.objRepo.create(obj);
-      this.objRepo.save(obj);
-
+      const value = await this.cacheManager.set(obj.key, obj.value, { ttl: 3000 });
       return {
         key: obj.key
       }
@@ -55,10 +43,6 @@ export class AppService {
     else {
       await this.cacheManager.del(key);
 
-      //for db
-      const foundedObj = this.objRepo.findOne({ where: { key } });
-      this.objRepo.delete((await foundedObj).id);
-
       return {
         key: key,
         message: 'your item was deleted'
@@ -72,16 +56,36 @@ export class AppService {
       throw new HttpException("Wrong key!", 400)
     }
     else {
-      foundObj = this.cacheManager.set(key, newData.value, { ttl: 300 });
-
-      //for db
-      const foundedDbObj = this.objRepo.findOne({ where: { key } });
-      this.objRepo.update((await foundedDbObj).id,newData);
-
+      foundObj = this.cacheManager.set(key, newData.value, { ttl: 3000 });
       return {
         data: newData.value
       }
     }
+  }
+
+  async saveToDb(): Promise<any> {
+    const keys = await this.cacheManager.store.keys();
+    console.log("all keys:", keys);
+    let allData = [];
+    for (let value of keys) {
+      const foundObj = await this.cacheManager.get(value);
+      allData.push({ key: value, value: foundObj });
+    }
+    console.log("allData:", allData);
+
+    this.objRepo.create(allData);
+    await this.objRepo.save(allData);
+  }
+
+  async getAll(): Promise<dbObject[]> {
+    const data = await this.objRepo.find();
+    const cachArr = [];
+    for (const item of data) {
+      const key = await this.create(item as objCreateDto);
+      cachArr.push({ key:key, value: item });
+    }
+    console.log("data from db:",cachArr);
+    return cachArr;
   }
 
 }
